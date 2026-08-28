@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Horarios de Oficina</title>
+<style id="page-style">
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root {
+    --bg: #F4F6FA;
+    --surface: #FFFFFF;
+    --surface-2: #EBF0F7;
+    --border: #D7DEE8;
+    --ink: #1B2430;
+    --ink-muted: #5C6675;
+    --accent: #2F6FED;
+    --accent-ink: #1948B3;
+    --accent-soft: #E7EEFF;
+    --good: #1B8A5C;
+    --good-soft: #E3F5EC;
+    --danger: #C4320A;
+    --danger-soft: #FCEBE4;
+    --shadow: 0 12px 32px -16px rgba(27, 36, 48, 0.28);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151C;
+      --surface: #1A212B;
+      --surface-2: #212A36;
+      --border: #313D4C;
+      --ink: #ECF1F7;
+      --ink-muted: #96A3B4;
+      --accent: #7AA2FF;
+      --accent-ink: #C4D6FF;
+      --accent-soft: #1D2942;
+      --good: #5BCB93;
+      --good-soft: #163425;
+      --danger: #FF9269;
+      --danger-soft: #3A2016;
+      --shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10151C;
+    --surface: #1A212B;
+    --surface-2: #212A36;
+    --border: #313D4C;
+    --ink: #ECF1F7;
+    --ink-muted: #96A3B4;
+    --accent: #7AA2FF;
+    --accent-ink: #C4D6FF;
+    --accent-soft: #1D2942;
+    --good: #5BCB93;
+    --good-soft: #163425;
+    --danger: #FF9269;
+    --danger-soft: #3A2016;
+    --shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 24px 70px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  h1, h2 { font-family: 'Manrope', system-ui, sans-serif; text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+
+  header.intro { display: flex; flex-direction: column; gap: 6px; }
+  header.intro h1 { font-size: clamp(24px, 4vw, 30px); font-weight: 800; }
+  header.intro p { color: var(--ink-muted); max-width: 62ch; font-size: 14.5px; margin: 0; }
+
+  .conn-banner {
+    display: none; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; font-weight: 600;
+    background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);
+  }
+  .conn-banner.show { display: block; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+
+  .list-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .list-toolbar .title { display: flex; flex-direction: column; gap: 2px; }
+  .list-toolbar .title strong { font-family: 'Manrope', sans-serif; font-size: 16px; }
+  .list-toolbar .title span { font-size: 12.5px; color: var(--ink-muted); }
+
+  .week-nav { display: flex; align-items: center; gap: 8px; }
+  .week-nav button {
+    all: unset; cursor: pointer; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; border: 1px solid var(--border); color: var(--ink-muted); font-size: 15px;
+  }
+  .week-nav button:hover { background: var(--surface-2); color: var(--ink); }
+  .week-label { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 600; color: var(--ink); min-width: 150px; text-align: center; }
+
+  .pill {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; padding: 4px 10px;
+    border-radius: 999px; background: var(--good-soft); color: var(--good); white-space: nowrap;
+  }
+
+  .grid-wrap { overflow-x: auto; }
+  table.grid { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 13.5px; }
+  table.grid th, table.grid td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 10px 10px; text-align: center; }
+  table.grid th:first-child, table.grid td:first-child { width: 168px; }
+  table.grid th:first-child, table.grid td:first-child { text-align: left; border-left: none; }
+  table.grid th { background: var(--surface-2); font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 12.5px; letter-spacing: 0.02em; }
+  table.grid td:first-child, table.grid th:first-child { white-space: nowrap; padding-right: 22px; }
+  table.grid td:first-child { font-weight: 600; }
+  table.grid tr:last-child td { border-bottom: none; }
+  table.grid td:last-child, table.grid th:last-child { border-right: none; }
+
+  .cell-btn {
+    all: unset; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 6px 10px; border-radius: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;
+    min-width: 118px; border: 1px solid transparent; transition: filter 0.15s ease;
+  }
+  .cell-btn:hover { filter: brightness(0.96); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cell-btn:hover { filter: brightness(1.15); } }
+  :root[data-theme="dark"] .cell-btn:hover { filter: brightness(1.15); }
+  .cell-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cell-btn.oficina { background: var(--surface-2); color: var(--ink-muted); border-color: var(--border); }
+  .cell-btn.home { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+  .cell-btn:disabled { cursor: default; opacity: 0.85; }
+  .cell-btn .hrs { opacity: 0.75; font-weight: 500; }
+
+  .day-note {
+    display: inline-block; font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 9.5px;
+    color: var(--accent-ink); background: var(--accent-soft); border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  }
+
+  .cell-inactive { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-muted); opacity: 0.65; }
+
+  tr.summary td { background: var(--surface-2); font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 12.5px; }
+  tr.summary td.limit-hit { background: var(--danger-soft); color: var(--danger); }
+  tr.summary td:first-child { font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; }
+
+  .hint-row { padding: 12px 20px 18px; font-size: 12.5px; color: var(--ink-muted); }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(10, 14, 20, 0.5);
+    display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); width: 100%; max-width: 380px; padding: 22px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .modal h3 { font-size: 17px; }
+  .modal .sub { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+  .modal-note {
+    font-size: 12.5px; color: var(--accent-ink); background: var(--accent-soft); border-radius: 9px; padding: 8px 10px; display: none;
+  }
+  .modal-note.show { display: block; }
+  .segmented { display: flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+  .segmented button { all: unset; flex: 1; text-align: center; padding: 9px 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink-muted); }
+  .segmented button.active.oficina { background: var(--surface-2); color: var(--ink); }
+  .segmented button.active.home { background: var(--danger-soft); color: var(--danger); }
+  .segmented button + button { border-left: 1px solid var(--border); }
+
+  .field-row { display: flex; gap: 10px; }
+  .field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11.5px; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field input {
+    font-family: 'IBM Plex Mono', monospace; font-size: 14px; padding: 8px 9px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--ink); width: 100%;
+  }
+  .field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .modal-error {
+    display: none; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);
+    border-radius: 9px; padding: 10px 12px; font-size: 13px; line-height: 1.45;
+  }
+  .modal-error.show { display: block; }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .btn { all: unset; cursor: pointer; padding: 9px 16px; border-radius: 8px; font-size: 13.5px; font-weight: 600; text-align: center; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.primary:disabled { opacity: 0.6; cursor: default; }
+  .btn.ghost { color: var(--ink-muted); }
+  .btn.ghost:hover { color: var(--ink); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(12px);
+    background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+    border-radius: 10px; padding: 12px 18px; font-size: 13.5px; display: flex; align-items: center; gap: 10px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 60; max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--good); }
+  .toast.err .dot { background: var(--danger); }
+
+  footer.notes {
+    display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--ink-muted);
+    border-top: 1px solid var(--border); padding-top: 18px;
+  }
+  footer.notes b { color: var(--ink); }
+  footer.notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+  @media (prefers-reduced-motion: reduce) { .toast, .cell-btn { transition: none; } }
+
+  @media (max-width: 640px) {
+    .page { padding: 20px 14px 60px; gap: 18px; }
+    .grid-wrap { overflow-x: visible; }
+    table.grid { min-width: 0; }
+    table.grid thead { display: none; }
+    table.grid, table.grid tbody, table.grid tr, table.grid td { display: block; width: 100%; }
+    table.grid tr { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; padding: 2px 12px; }
+    table.grid tr.summary { background: var(--surface-2); }
+    table.grid td { border: none !important; padding: 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    table.grid td:not(:first-child):not(:last-child) { border-bottom: 1px solid var(--border) !important; }
+    table.grid td:first-child {
+      padding-top: 10px; padding-bottom: 6px; font-family: 'Manrope', sans-serif; font-size: 14.5px;
+      border-bottom: 1px dashed var(--border) !important; white-space: normal;
+    }
+    table.grid td:not(:first-child)::before {
+      content: attr(data-label); font-size: 11.5px; font-weight: 600; color: var(--ink-muted); flex-shrink: 0;
+    }
+    .cell-btn { min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page" id="app"></div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div>
+      <h3 id="modalTitle">Editar fila</h3>
+      <div class="sub" id="modalSub">Nombre · Día</div>
+    </div>
+    <div class="modal-note" id="modalNote"></div>
+    <div class="segmented" id="segmented">
+      <button type="button" class="oficina" data-val="Oficina">Oficina</button>
+      <button type="button" class="home" data-val="Home Office">Home Office</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="fIn">Entrada</label><input type="text" id="fIn" inputmode="numeric" /></div>
+      <div class="field"><label for="fOut">Salida</label><input type="text" id="fOut" inputmode="numeric" /></div>
+    </div>
+    <div class="modal-error" id="modalError"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancel">Cancelar</button>
+      <button class="btn primary" id="btnSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+import {
+  getFirestore, doc, onSnapshot, setDoc
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDe2KiFvBcmqPHjiNGTsZAciPK6DK84Dc8",
+  authDomain: "horarios-oficina-noa.firebaseapp.com",
+  projectId: "horarios-oficina-noa",
+  storageBucket: "horarios-oficina-noa.firebasestorage.app",
+  messagingSenderId: "873882777282",
+  appId: "1:873882777282:web:bc36500e2d78ddd815ed5b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db, "horarios", "afiliaciones-noa");
+
+const LIMIT_HOME = 3;
+const MIN_FROM_9 = 3;
+const DAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
+const DAY_OFFSET = { Lunes: 0, Martes: 1, Miercoles: 2, Jueves: 3, Viernes: 4 };
+
+const INITIAL_STATE = {
+  employees: [
+    { name: "Fernanda Figueroa", hours: 6, activeUntil: null },
+    { name: "Fernando Marmo", hours: 9, activeUntil: null },
+    { name: "Victoria Souto", hours: 6, activeUntil: null },
+    { name: "Camila Herrera", hours: 6, activeUntil: null },
+    { name: "Ornela Pezzini", hours: 6, activeUntil: null },
+    { name: "Nahuel Banco", hours: 6, activeUntil: null },
+    { name: "Jeronimo Ezcurra", hours: 6, activeUntil: "2026-08-31" }
+  ],
+  currentWeek: "2026-08-31",
+  weeks: {}
+};
+
+let STATE = null;
+let connected = false;
+let saving = false;
+
+const connBanner = document.getElementById('connBanner');
+
+function key(name, day) { return name + '|' + day; }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function isoDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+function dateForDay(weekIso, day) {
+  const d = new Date(weekIso + 'T00:00:00');
+  d.setDate(d.getDate() + DAY_OFFSET[day]);
+  return isoDate(d);
+}
+
+function isMonthEnd(dateIso) {
+  const d = new Date(dateIso + 'T00:00:00');
+  const next = new Date(d.getTime());
+  next.setDate(next.getDate() + 1);
+  return next.getMonth() !== d.getMonth();
+}
+
+function isActiveOn(emp, dateIso) {
+  return !emp.activeUntil || dateIso <= emp.activeUntil;
+}
+
+function parseHour(s) {
+  const m = /^(\d{1,2})(?::(\d{2}))?/.exec(String(s || '').trim());
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mm = m[2] ? parseInt(m[2], 10) : 0;
+  return h + mm / 60;
+}
+
+function weekData() {
+  if (!STATE.weeks[STATE.currentWeek]) STATE.weeks[STATE.currentWeek] = {};
+  return STATE.weeks[STATE.currentWeek];
+}
+
+function defaultRecordFor(emp, dateIso) {
+  if (isMonthEnd(dateIso)) return { modalidad: 'Oficina', entrada: '11', salida: '20' };
+  if (emp.hours === 9) return { modalidad: 'Oficina', entrada: '9', salida: '18' };
+  return { modalidad: 'Oficina', entrada: '9', salida: '15' };
+}
+
+function recordFor(emp, day) {
+  const w = weekData();
+  const saved = w[key(emp.name, day)];
+  if (saved) return saved;
+  return defaultRecordFor(emp, dateForDay(STATE.currentWeek, day));
+}
+
+function countHomeOffice(day, excludeName) {
+  const w = weekData();
+  const dateIso = dateForDay(STATE.currentWeek, day);
+  let c = 0;
+  STATE.employees.forEach(function (emp) {
+    if (emp.name === excludeName) return;
+    if (!isActiveOn(emp, dateIso)) return;
+    const r = w[key(emp.name, day)];
+    if (r && r.modalidad === 'Home Office') c++;
+  });
+  return c;
+}
+
+function countFrom9(day) {
+  const w = weekData();
+  const dateIso = dateForDay(STATE.currentWeek, day);
+  let c = 0;
+  STATE.employees.forEach(function (emp) {
+    if (!isActiveOn(emp, dateIso)) return;
+    const r = w[key(emp.name, day)] || defaultRecordFor(emp, dateIso);
+    if (r.modalidad === 'Oficina') {
+      const h = parseHour(r.entrada);
+      if (h !== null && h <= 9) c++;
+    }
+  });
+  return c;
+}
+
+function countUntil18(day) {
+  const w = weekData();
+  const dateIso = dateForDay(STATE.currentWeek, day);
+  let c = 0;
+  STATE.employees.forEach(function (emp) {
+    if (!isActiveOn(emp, dateIso)) return;
+    const r = w[key(emp.name, day)] || defaultRecordFor(emp, dateIso);
+    if (r.modalidad === 'Oficina') {
+      const h = parseHour(r.salida);
+      if (h !== null && h >= 18) c++;
+    }
+  });
+  return c;
+}
+
+function mondayLabel(iso) {
+  const start = new Date(iso + 'T00:00:00');
+  const end = new Date(start.getTime() + 4 * 86400000);
+  const fmt = function (d) { return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1); };
+  return 'Lunes ' + fmt(start) + ' – Viernes ' + fmt(end);
+}
+
+function shiftWeek(deltaDays) {
+  const d = new Date(STATE.currentWeek + 'T00:00:00');
+  d.setDate(d.getDate() + deltaDays);
+  STATE.currentWeek = isoDate(d);
+  render();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function weekHasAnyActive(emp) {
+  return DAYS.some(function (d) { return isActiveOn(emp, dateForDay(STATE.currentWeek, d)); });
+}
+
+function renderApp() {
+  let html = '';
+  html += '<header class="intro">';
+  html += '<span class="eyebrow">Afiliaciones NOA</span>';
+  html += '<h1>Horarios de oficina</h1>';
+  html += '<p>Cada persona edita su propia fila. Se guarda solo y en vivo — lo que ves vos lo ve todo el equipo, sin recargar.</p>';
+  html += '</header>';
+  html += '<div class="conn-banner" id="connBanner">Sin conexión con la base de datos — los cambios no se están guardando.</div>';
+
+  html += '<div class="card">';
+  html += '<div class="list-toolbar">';
+  html += '<div class="title"><strong>Semana</strong><span>Horarios de Oficina · Afiliaciones NOA</span></div>';
+  html += '<div class="week-nav">';
+  html += '<button type="button" id="weekPrev" aria-label="Semana anterior">‹</button>';
+  html += '<span class="week-label">' + mondayLabel(STATE.currentWeek) + '</span>';
+  html += '<button type="button" id="weekNext" aria-label="Semana siguiente">›</button>';
+  html += '</div>';
+  html += '<span class="pill">máx. 3 en Home Office</span>';
+  html += '</div>';
+
+  html += '<div class="grid-wrap"><table class="grid" aria-label="Grilla de horarios editable"><thead><tr><th>Nombre</th>';
+  DAYS.forEach(function (d) { html += '<th>' + d + '</th>'; });
+  html += '</tr></thead><tbody>';
+
+  STATE.employees.forEach(function (emp) {
+    if (!weekHasAnyActive(emp)) return;
+    html += '<tr><td>' + escapeHtml(emp.name) + '</td>';
+    DAYS.forEach(function (d) {
+      const dateIso = dateForDay(STATE.currentWeek, d);
+      if (!isActiveOn(emp, dateIso)) {
+        html += '<td data-label="' + d + '"><span class="cell-inactive">— no activo</span></td>';
+        return;
+      }
+      const rec = recordFor(emp, d);
+      const cls = rec.modalidad === 'Home Office' ? 'home' : 'oficina';
+      const note = isMonthEnd(dateIso) ? '<span class="day-note">corte</span>' : '';
+      html += '<td data-label="' + d + '"><button type="button" class="cell-btn ' + cls + '" data-name="' + escapeHtml(emp.name) + '" data-day="' + d + '">' +
+        rec.modalidad + '<span class="hrs">' + escapeHtml(rec.entrada) + '–' + escapeHtml(rec.salida) + '</span></button>' + note + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '<tr class="summary"><td>En Home Office</td>';
+  DAYS.forEach(function (d) {
+    const c = countHomeOffice(d, null);
+    html += '<td data-label="' + d + '" class="' + (c > LIMIT_HOME ? 'limit-hit' : '') + '">' + c + ' / ' + LIMIT_HOME + '</td>';
+  });
+  html += '</tr>';
+
+  html += '<tr class="summary"><td>Presentes desde las 9</td>';
+  DAYS.forEach(function (d) {
+    const c = countFrom9(d);
+    html += '<td data-label="' + d + '" class="' + (c < MIN_FROM_9 ? 'limit-hit' : '') + '">' + c + ' / mín. ' + MIN_FROM_9 + '</td>';
+  });
+  html += '</tr>';
+
+  html += '<tr class="summary"><td>Cubre hasta las 18</td>';
+  DAYS.forEach(function (d) {
+    const c = countUntil18(d);
+    html += '<td data-label="' + d + '" class="' + (c < 1 ? 'limit-hit' : '') + '">' + (c >= 1 ? 'sí' : 'nadie') + '</td>';
+  });
+  html += '</tr>';
+
+  html += '</tbody></table></div>';
+  html += '<div class="hint-row">Clic en una celda para editarla. Usá las flechas para moverte entre semanas.</div>';
+  html += '</div>';
+
+  html += '<footer class="notes">';
+  html += '<p><b>Reglas del equipo:</b></p>';
+  html += '<ul>';
+  html += '<li>Máximo 3 personas en Home Office el mismo día.</li>';
+  html += '<li>Siempre tiene que haber mínimo 3 personas presenciales desde las 9.</li>';
+  html += '<li>Alguien tiene que cubrir presencial hasta las 18.</li>';
+  html += '<li>Último día de cada mes (corte comercial): se sugiere presencial de 11 a 20 para todos — se puede ajustar si hace falta.</li>';
+  html += '<li>Jerónimo Ezcurra: último día lunes 31/08/2026 — sale solo de la planilla en las semanas siguientes.</li>';
+  html += '<li>Jornada estándar: 6 horas para todos excepto Fernando Marmo, que tiene 9.</li>';
+  html += '</ul>';
+  html += '</footer>';
+
+  document.getElementById('app').innerHTML = html;
+
+  document.querySelectorAll('.cell-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openModal(btn.getAttribute('data-name'), btn.getAttribute('data-day'));
+    });
+  });
+  const prevBtn = document.getElementById('weekPrev');
+  const nextBtn = document.getElementById('weekNext');
+  if (prevBtn) prevBtn.addEventListener('click', function () { shiftWeek(-7); });
+  if (nextBtn) nextBtn.addEventListener('click', function () { shiftWeek(7); });
+}
+
+function render() { if (STATE) renderApp(); }
+
+// ---- modal ----
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalSub = document.getElementById('modalSub');
+const modalNote = document.getElementById('modalNote');
+const segmented = document.getElementById('segmented');
+const fIn = document.getElementById('fIn');
+const fOut = document.getElementById('fOut');
+const modalError = document.getElementById('modalError');
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+const btnSave = document.getElementById('btnSave');
+
+let editing = null;
+let pendingModalidad = 'Oficina';
+
+function findEmployee(name) {
+  return STATE.employees.filter(function (e) { return e.name === name; })[0];
+}
+
+function openModal(name, day) {
+  editing = { name: name, day: day };
+  const emp = findEmployee(name);
+  const rec = recordFor(emp, day);
+  pendingModalidad = rec.modalidad;
+  modalSub.textContent = name + ' · ' + day;
+  fIn.value = rec.entrada;
+  fOut.value = rec.salida;
+  modalError.classList.remove('show');
+  modalError.textContent = '';
+  const dateIso = dateForDay(STATE.currentWeek, day);
+  if (isMonthEnd(dateIso)) {
+    modalNote.textContent = 'Corte de mes: se sugiere presencial 11 a 20. Podés cambiarlo si hace falta.';
+    modalNote.classList.add('show');
+  } else {
+    modalNote.classList.remove('show');
+  }
+  updateSegmented();
+  modalBackdrop.classList.add('open');
+}
+function closeModal() { modalBackdrop.classList.remove('open'); editing = null; }
+function updateSegmented() {
+  segmented.querySelectorAll('button').forEach(function (b) {
+    b.classList.toggle('active', b.getAttribute('data-val') === pendingModalidad);
+  });
+}
+segmented.addEventListener('click', function (e) {
+  const btn = e.target.closest('button[data-val]');
+  if (!btn) return;
+  pendingModalidad = btn.getAttribute('data-val');
+  updateSegmented();
+  modalError.classList.remove('show');
+});
+document.getElementById('btnCancel').addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', function (e) { if (e.target === modalBackdrop) closeModal(); });
+
+btnSave.addEventListener('click', async function () {
+  if (!editing) return;
+  const name = editing.name, day = editing.day;
+
+  if (pendingModalidad === 'Home Office') {
+    const others = countHomeOffice(day, name);
+    if (others >= LIMIT_HOME) {
+      modalError.textContent = 'Ya hay ' + others + ' personas en Home Office el ' + day + '. Elegí otro día o dejá esta fila en Oficina.';
+      modalError.classList.add('show');
+      return;
+    }
+  }
+
+  const w = weekData();
+  w[key(name, day)] = { modalidad: pendingModalidad, entrada: fIn.value || '9', salida: fOut.value || '18' };
+
+  btnSave.disabled = true;
+  btnSave.textContent = 'Guardando…';
+
+  try {
+    await setDoc(docRef, STATE);
+    closeModal();
+    render();
+    showToast('Guardado.', false);
+  } catch (err) {
+    showToast('No se pudo guardar. Probá de nuevo.', true);
+  }
+  btnSave.disabled = false;
+  btnSave.textContent = 'Guardar';
+});
+
+let toastTimer = null;
+function showToast(msg, isError) {
+  toastMsg.textContent = msg;
+  toast.classList.toggle('err', !!isError);
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2600);
+}
+
+// ---- live sync with Firestore ----
+onSnapshot(docRef, function (snap) {
+  connected = true;
+  if (snap.exists()) {
+    const incoming = snap.data();
+    const preserveWeek = STATE ? STATE.currentWeek : incoming.currentWeek;
+    STATE = incoming;
+    STATE.currentWeek = preserveWeek;
+  } else {
+    STATE = JSON.parse(JSON.stringify(INITIAL_STATE));
+    setDoc(docRef, STATE).catch(function () {});
+  }
+  document.getElementById('connBanner') && document.getElementById('connBanner').classList.remove('show');
+  render();
+}, function (err) {
+  if (!STATE) {
+    STATE = JSON.parse(JSON.stringify(INITIAL_STATE));
+    render();
+  }
+  const b = document.getElementById('connBanner');
+  if (b) b.classList.add('show');
+});
+</script>
+</body>
+</html>
