@@ -298,6 +298,8 @@ const docRef = doc(db, "horarios", "afiliaciones-noa");
 
 const LIMIT_HOME = 3;
 const MIN_FROM_9 = 3;
+// No están en la oficina de Santiago aunque figuren como "Oficina": no cuentan para la cobertura hasta las 18.
+const REMOTE_NAMES = ["Victoria Souto"];
 const DAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
 const DAY_OFFSET = { Lunes: 0, Martes: 1, Miercoles: 2, Jueves: 3, Viernes: 4 };
 
@@ -396,13 +398,14 @@ function countFrom9(day) {
   return c;
 }
 
-function countUntil18(day) {
+function countUntil18(day, overrideName, overrideRecord) {
   const w = weekData();
   const dateIso = dateForDay(STATE.currentWeek, day);
   let c = 0;
   STATE.employees.forEach(function (emp) {
+    if (REMOTE_NAMES.indexOf(emp.name) !== -1) return;
     if (!isActiveOn(emp, dateIso)) return;
-    const r = w[key(emp.name, day)] || defaultRecordFor(emp, dateIso);
+    const r = (overrideName && emp.name === overrideName) ? overrideRecord : (w[key(emp.name, day)] || defaultRecordFor(emp, dateIso));
     if (r.modalidad === 'Oficina') {
       const h = parseHour(r.salida);
       if (h !== null && h >= 18) c++;
@@ -507,7 +510,7 @@ function renderApp() {
   html += '<ul>';
   html += '<li>Máximo 3 personas en Home Office el mismo día.</li>';
   html += '<li>Siempre tiene que haber mínimo 3 personas presenciales desde las 9.</li>';
-  html += '<li>Alguien tiene que cubrir presencial hasta las 18.</li>';
+  html += '<li>Siempre tiene que quedar alguien presencial en la oficina de Santiago hasta las 18 (bloqueo real, no solo aviso). Victoria no cuenta para esta regla porque trabaja desde Salta.</li>';
   html += '<li>Último día de cada mes (corte comercial): se sugiere presencial de 11 a 20 para todos — se puede ajustar si hace falta.</li>';
   html += '<li>Jerónimo Ezcurra: último día lunes 31/08/2026 — sale solo de la planilla en las semanas siguientes.</li>';
   html += '<li>Jornada estándar: 6 horas para todos excepto Fernando Marmo, que tiene 9.</li>';
@@ -597,8 +600,19 @@ btnSave.addEventListener('click', async function () {
     }
   }
 
+  const candidate = { modalidad: pendingModalidad, entrada: fIn.value || '9', salida: fOut.value || '18' };
+
+  if (REMOTE_NAMES.indexOf(name) === -1) {
+    const coverage = countUntil18(day, name, candidate);
+    if (coverage < 1) {
+      modalError.textContent = 'Con este cambio no quedaría nadie en la oficina hasta las 18 el ' + day + '. Ajustá tu salida a las 18 o más tarde, o dejá que otra persona cubra ese horario.';
+      modalError.classList.add('show');
+      return;
+    }
+  }
+
   const w = weekData();
-  w[key(name, day)] = { modalidad: pendingModalidad, entrada: fIn.value || '9', salida: fOut.value || '18' };
+  w[key(name, day)] = candidate;
 
   btnSave.disabled = true;
   btnSave.textContent = 'Guardando…';
