@@ -27,6 +27,8 @@
     --vacation-soft: #FDF0DC;
     --sick: #B0206B;
     --sick-soft: #FCE6F1;
+    --trip: #0E7C86;
+    --trip-soft: #E1F5F5;
     --shadow: 0 12px 32px -16px rgba(27, 36, 48, 0.28);
   }
 
@@ -51,6 +53,8 @@
       --vacation-soft: #3A2B12;
       --sick: #FF8FC7;
       --sick-soft: #3A1830;
+      --trip: #6FD8E0;
+      --trip-soft: #123030;
       --shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
     }
   }
@@ -75,6 +79,8 @@
     --vacation-soft: #3A2B12;
     --sick: #FF8FC7;
     --sick-soft: #3A1830;
+    --trip: #6FD8E0;
+    --trip-soft: #123030;
     --shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
   }
 
@@ -169,6 +175,7 @@
   .cell-btn.licencia { background: var(--leave-soft); color: var(--leave); border-color: var(--leave); }
   .cell-btn.vacaciones { background: var(--vacation-soft); color: var(--vacation); border-color: var(--vacation); }
   .cell-btn.enfermedad { background: var(--sick-soft); color: var(--sick); border-color: var(--sick); }
+  .cell-btn.viaje { background: var(--trip-soft); color: var(--trip); border-color: var(--trip); }
   .cell-btn.unset { background: transparent; color: var(--ink-muted); border-color: var(--border); border-style: dashed; font-weight: 500; }
   .cell-btn:disabled { cursor: default; opacity: 0.85; }
   .cell-btn .hrs { opacity: 0.75; font-weight: 500; }
@@ -206,12 +213,12 @@
     border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--border);
   }
   .segmented button { all: unset; text-align: center; padding: 9px 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink-muted); background: var(--surface); }
-  .segmented button:nth-child(5) { grid-column: 1 / -1; }
   .segmented button.active.oficina { background: var(--surface-2); color: var(--ink); }
   .segmented button.active.home { background: var(--danger-soft); color: var(--danger); }
   .segmented button.active.licencia { background: var(--leave-soft); color: var(--leave); }
   .segmented button.active.vacaciones { background: var(--vacation-soft); color: var(--vacation); }
   .segmented button.active.enfermedad { background: var(--sick-soft); color: var(--sick); }
+  .segmented button.active.viaje { background: var(--trip-soft); color: var(--trip); }
 
   .field-row { display: flex; gap: 10px; }
   .field-row.hidden { display: none; }
@@ -294,6 +301,7 @@
       <button type="button" class="licencia" data-val="Licencia">Licencia</button>
       <button type="button" class="vacaciones" data-val="Vacaciones">Vacaciones</button>
       <button type="button" class="enfermedad" data-val="Enfermedad">Enfermedad</button>
+      <button type="button" class="viaje" data-val="Viaje laboral">Viaje laboral</button>
     </div>
     <div class="field-row" id="fieldRow">
       <div class="field"><label for="fIn">Entrada</label><input type="text" id="fIn" inputmode="numeric" /></div>
@@ -472,8 +480,20 @@ const MODE_CLASS = {
   'Home Office': 'home',
   'Licencia': 'licencia',
   'Vacaciones': 'vacaciones',
-  'Enfermedad': 'enfermedad'
+  'Enfermedad': 'enfermedad',
+  'Viaje laboral': 'viaje'
 };
+
+function othersUnsetForDay(day, excludeName) {
+  const w = weekData();
+  const dateIso = dateForDay(STATE.currentWeek, day);
+  return STATE.employees.every(function (emp) {
+    if (emp.name === excludeName) return true;
+    if (REMOTE_NAMES.indexOf(emp.name) !== -1) return true;
+    if (!isActiveOn(emp, dateIso)) return true;
+    return !w[key(emp.name, day)];
+  });
+}
 
 function renderApp() {
   let html = '';
@@ -552,11 +572,11 @@ function renderApp() {
   html += '<ul>';
   html += '<li>Máximo 3 personas en Home Office el mismo día.</li>';
   html += '<li>Siempre tiene que haber mínimo 3 personas presenciales desde las 9.</li>';
-  html += '<li>Siempre tiene que quedar alguien presencial en la oficina de Santiago hasta las 18 (bloqueo real, no solo aviso). Victoria no cuenta para esta regla porque trabaja desde Salta.</li>';
+  html += '<li>Siempre tiene que quedar alguien presencial en la oficina de Santiago hasta las 18. El bloqueo real solo se activa si ya hay otra persona con el día cargado y aun así nadie cubre; si el resto del día todavía está vacío, se puede guardar igual. Victoria no cuenta para esta regla porque trabaja desde Salta.</li>';
   html += '<li>Último día de cada mes (corte comercial): se sugiere presencial de 11 a 20 para todos — se puede ajustar si hace falta.</li>';
   html += '<li>Jerónimo Ezcurra: último día lunes 31/08/2026 — sale solo de la planilla en las semanas siguientes.</li>';
   html += '<li>Jornada estándar: 6 horas para todos excepto Fernando Marmo, que tiene 9.</li>';
-  html += '<li>Modalidades disponibles: Oficina, Home Office, Licencia, Vacaciones y Enfermedad. Los días sin cargar quedan en blanco — no se asume ningún horario hasta que cada persona lo complete.</li>';
+  html += '<li>Modalidades disponibles: Oficina, Home Office, Licencia, Vacaciones, Enfermedad y Viaje laboral. Los días sin cargar quedan en blanco — no se asume ningún horario hasta que cada persona lo complete.</li>';
   html += '</ul>';
   html += '</footer>';
 
@@ -665,7 +685,8 @@ btnSave.addEventListener('click', async function () {
   if (REMOTE_NAMES.indexOf(name) === -1) {
     const priorCoverage = countUntil18(day);
     const newCoverage = countUntil18(day, name, candidate);
-    if (priorCoverage >= 1 && newCoverage < 1) {
+    const restEmpty = othersUnsetForDay(day, name);
+    if (priorCoverage >= 1 && newCoverage < 1 && !restEmpty) {
       modalError.textContent = 'Con este cambio no quedaría nadie en la oficina hasta las 18 el ' + day + '. Ajustá tu salida a las 18 o más tarde, o dejá que otra persona cubra ese horario.';
       modalError.classList.add('show');
       return;
