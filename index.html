@@ -345,13 +345,14 @@ const DAY_OFFSET = { Lunes: 0, Martes: 1, Miercoles: 2, Jueves: 3, Viernes: 4 };
 
 const INITIAL_STATE = {
   employees: [
-    { name: "Fernanda Figueroa", hours: 6, activeUntil: null },
-    { name: "Fernando Marmo", hours: 9, activeUntil: null },
-    { name: "Victoria Souto", hours: 6, activeUntil: null },
-    { name: "Camila Herrera", hours: 6, activeUntil: null },
-    { name: "Ornela Pezzini", hours: 6, activeUntil: null },
-    { name: "Nahuel Banco", hours: 6, activeUntil: null },
-    { name: "Jeronimo Ezcurra", hours: 6, activeUntil: "2026-08-31" }
+    { name: "Fernanda Figueroa", hours: 6, activeFrom: null, activeUntil: null },
+    { name: "Fernando Marmo", hours: 9, activeFrom: null, activeUntil: null },
+    { name: "Victoria Souto", hours: 6, activeFrom: null, activeUntil: null },
+    { name: "Camila Herrera", hours: 6, activeFrom: null, activeUntil: null },
+    { name: "Ornela Pezzini", hours: 6, activeFrom: null, activeUntil: null },
+    { name: "Nahuel Banco", hours: 6, activeFrom: null, activeUntil: null },
+    { name: "Jeronimo Ezcurra", hours: 6, activeFrom: null, activeUntil: "2026-08-31" },
+    { name: "Gonzalo Ochoa", hours: 6, activeFrom: "2026-10-05", activeUntil: null }
   ],
   currentWeek: "2026-08-31",
   weeks: {}
@@ -381,7 +382,9 @@ function isMonthEnd(dateIso) {
 }
 
 function isActiveOn(emp, dateIso) {
-  return !emp.activeUntil || dateIso <= emp.activeUntil;
+  if (emp.activeFrom && dateIso < emp.activeFrom) return false;
+  if (emp.activeUntil && dateIso > emp.activeUntil) return false;
+  return true;
 }
 
 function parseHour(s) {
@@ -575,6 +578,7 @@ function renderApp() {
   html += '<li>Siempre tiene que quedar alguien presencial en la oficina de Santiago hasta las 18. El bloqueo real solo se activa si ya hay otra persona con el día cargado y aun así nadie cubre; si el resto del día todavía está vacío, se puede guardar igual. Victoria no cuenta para esta regla porque trabaja desde Salta.</li>';
   html += '<li>Último día de cada mes (corte comercial): se sugiere presencial de 11 a 20 para todos — se puede ajustar si hace falta.</li>';
   html += '<li>Jerónimo Ezcurra: último día lunes 31/08/2026 — sale solo de la planilla en las semanas siguientes.</li>';
+  html += '<li>Gonzalo Ochoa se suma al equipo: aparece en la planilla desde el lunes 05/10/2026. Esta semana su horario lo coordina directamente Marlene.</li>';
   html += '<li>Jornada estándar: 6 horas para todos excepto Fernando Marmo, que tiene 9.</li>';
   html += '<li>Modalidades disponibles: Oficina, Home Office, Licencia, Vacaciones, Enfermedad y Viaje laboral. Los días sin cargar quedan en blanco — no se asume ningún horario hasta que cada persona lo complete.</li>';
   html += '</ul>';
