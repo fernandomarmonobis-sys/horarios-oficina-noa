@@ -186,6 +186,23 @@
   }
 
   .cell-inactive { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-muted); opacity: 0.65; }
+  .cell-holiday {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 118px; padding: 6px 10px; border-radius: 7px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    background: var(--trip-soft); color: var(--trip); border: 1px solid var(--trip);
+  }
+  .holiday-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid var(--border);
+    font-size: 12.5px; color: var(--ink-muted);
+  }
+  .holiday-bar .lbl { font-weight: 600; margin-right: 4px; }
+  .holiday-btn {
+    all: unset; cursor: pointer; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; color: var(--ink-muted);
+  }
+  .holiday-btn:hover { background: var(--surface-2); color: var(--ink); }
+  .holiday-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .holiday-btn.on { background: var(--trip-soft); color: var(--trip); border-color: var(--trip); }
 
   tr.summary td { background: var(--surface-2); font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 12.5px; }
   tr.summary td.limit-hit { background: var(--danger-soft); color: var(--danger); }
@@ -381,6 +398,26 @@ function isMonthEnd(dateIso) {
   return next.getMonth() !== d.getMonth();
 }
 
+function isHoliday(dateIso) {
+  return !!(STATE.holidays && STATE.holidays[dateIso]);
+}
+
+async function toggleHoliday(day) {
+  const dateIso = dateForDay(STATE.currentWeek, day);
+  if (!STATE.holidays) STATE.holidays = {};
+  const wasOn = !!STATE.holidays[dateIso];
+  if (wasOn) delete STATE.holidays[dateIso]; else STATE.holidays[dateIso] = true;
+  render();
+  try {
+    await setDoc(docRef, STATE);
+    showToast(wasOn ? day + ' vuelve a ser día laborable.' : day + ' marcado como feriado para todos.', false);
+  } catch (err) {
+    if (wasOn) STATE.holidays[dateIso] = true; else delete STATE.holidays[dateIso];
+    render();
+    showToast('No se pudo guardar. Probá de nuevo.', true);
+  }
+}
+
 function isActiveOn(emp, dateIso) {
   if (emp.activeFrom && dateIso < emp.activeFrom) return false;
   if (emp.activeUntil && dateIso > emp.activeUntil) return false;
@@ -518,6 +555,15 @@ function renderApp() {
   html += '<span class="pill">máx. 3 en Home Office</span>';
   html += '</div>';
 
+  html += '<div class="holiday-bar"><span class="lbl">Feriados de la semana:</span>';
+  DAYS.forEach(function (d) {
+    const iso = dateForDay(STATE.currentWeek, d);
+    const on = isHoliday(iso);
+    html += '<button type="button" class="holiday-btn' + (on ? ' on' : '') + '" data-holiday="' + d + '" aria-pressed="' + on + '" title="' +
+      (on ? 'Quitar feriado' : 'Marcar como feriado para todos') + '">' + d.slice(0, 3) + ' ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) + (on ? ' · feriado' : '') + '</button>';
+  });
+  html += '</div>';
+
   html += '<div class="grid-wrap"><table class="grid" aria-label="Grilla de horarios editable"><thead><tr><th>Nombre</th>';
   DAYS.forEach(function (d) { html += '<th>' + d + '</th>'; });
   html += '</tr></thead><tbody>';
@@ -529,6 +575,10 @@ function renderApp() {
       const dateIso = dateForDay(STATE.currentWeek, d);
       if (!isActiveOn(emp, dateIso)) {
         html += '<td data-label="' + d + '"><span class="cell-inactive">— no activo</span></td>';
+        return;
+      }
+      if (isHoliday(dateIso)) {
+        html += '<td data-label="' + d + '"><span class="cell-holiday">FERIADO</span></td>';
         return;
       }
       const rec = recordFor(emp, d);
@@ -545,8 +595,11 @@ function renderApp() {
     html += '</tr>';
   });
 
+  const holidayCell = function (d) { return '<td data-label="' + d + '">feriado</td>'; };
+
   html += '<tr class="summary"><td>En Home Office</td>';
   DAYS.forEach(function (d) {
+    if (isHoliday(dateForDay(STATE.currentWeek, d))) { html += holidayCell(d); return; }
     const c = countHomeOffice(d, null);
     html += '<td data-label="' + d + '" class="' + (c > LIMIT_HOME ? 'limit-hit' : '') + '">' + c + ' / ' + LIMIT_HOME + '</td>';
   });
@@ -554,6 +607,7 @@ function renderApp() {
 
   html += '<tr class="summary"><td>Presentes desde las 9</td>';
   DAYS.forEach(function (d) {
+    if (isHoliday(dateForDay(STATE.currentWeek, d))) { html += holidayCell(d); return; }
     const c = countFrom9(d);
     html += '<td data-label="' + d + '" class="' + (c < MIN_FROM_9 ? 'limit-hit' : '') + '">' + c + ' / mín. ' + MIN_FROM_9 + '</td>';
   });
@@ -561,6 +615,7 @@ function renderApp() {
 
   html += '<tr class="summary"><td>Cubre hasta las 18</td>';
   DAYS.forEach(function (d) {
+    if (isHoliday(dateForDay(STATE.currentWeek, d))) { html += holidayCell(d); return; }
     const c = countUntil18(d);
     html += '<td data-label="' + d + '" class="' + (c < 1 ? 'limit-hit' : '') + '">' + (c >= 1 ? 'sí' : 'nadie') + '</td>';
   });
@@ -579,6 +634,7 @@ function renderApp() {
   html += '<li>Último día de cada mes (corte comercial): se sugiere presencial de 11 a 20 para todos — se puede ajustar si hace falta.</li>';
   html += '<li>Jerónimo Ezcurra: último día lunes 31/08/2026 — sale solo de la planilla en las semanas siguientes.</li>';
   html += '<li>Gonzalo Ochoa se suma al equipo: aparece en la planilla desde el lunes 05/10/2026. Esta semana su horario lo coordina directamente Marlene.</li>';
+  html += '<li>Feriados: con los botones de "Feriados de la semana" se marca un día como FERIADO para todo el equipo. No se pierde lo ya cargado: si se quita el feriado, vuelven los horarios.</li>';
   html += '<li>Jornada estándar: 6 horas para todos excepto Fernando Marmo, que tiene 9.</li>';
   html += '<li>Modalidades disponibles: Oficina, Home Office, Licencia, Vacaciones, Enfermedad y Viaje laboral. Los días sin cargar quedan en blanco — no se asume ningún horario hasta que cada persona lo complete.</li>';
   html += '</ul>';
@@ -590,6 +646,9 @@ function renderApp() {
     btn.addEventListener('click', function () {
       openModal(btn.getAttribute('data-name'), btn.getAttribute('data-day'));
     });
+  });
+  document.querySelectorAll('.holiday-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { toggleHoliday(btn.getAttribute('data-holiday')); });
   });
   const prevBtn = document.getElementById('weekPrev');
   const nextBtn = document.getElementById('weekNext');
