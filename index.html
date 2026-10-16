@@ -529,6 +529,7 @@ function othersAllFilledForDay(day, excludeName) {
   const dateIso = dateForDay(STATE.currentWeek, day);
   return STATE.employees.every(function (emp) {
     if (emp.name === excludeName) return true;
+    if (REMOTE_NAMES.indexOf(emp.name) !== -1) return true;
     if (!isActiveOn(emp, dateIso)) return true;
     return !!w[key(emp.name, day)];
   });
@@ -629,7 +630,7 @@ function renderApp() {
   html += '<ul>';
   html += '<li>Máximo 3 personas en Home Office el mismo día.</li>';
   html += '<li>Siempre tiene que haber mínimo 3 personas presenciales desde las 9.</li>';
-  html += '<li>Siempre tiene que quedar alguien presencial en la oficina de Santiago hasta las 18. El bloqueo real solo se activa cuando todo el resto del equipo ya cargó ese día y aun así nadie cubre: quien completa último tiene que cubrir. Mientras falte gente por cargar, se puede guardar igual — por eso conviene cargar el horario cuanto antes. Victoria no cuenta para esta regla porque trabaja desde Salta.</li>';
+  html += '<li>Siempre tiene que quedar alguien presencial en la oficina de Santiago hasta las 18. El bloqueo real solo se activa cuando todo el resto del equipo de Santiago ya cargó ese día y aun así nadie cubre: quien completa último tiene que cubrir. Mientras falte gente por cargar, se puede guardar igual — por eso conviene cargar el horario cuanto antes. Victoria no cuenta para esta regla porque trabaja desde Salta.</li>';
   html += '<li>Último día de cada mes (corte comercial): se sugiere presencial de 11 a 20 para todos — se puede ajustar si hace falta.</li>';
   html += '<li>Jerónimo Ezcurra: último día lunes 31/08/2026 — sale solo de la planilla en las semanas siguientes.</li>';
   html += '<li>Gonzalo Ochoa se suma al equipo: aparece en la planilla desde el lunes 05/10/2026. Esta semana su horario lo coordina directamente Marlene.</li>';
